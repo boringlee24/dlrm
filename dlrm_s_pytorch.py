@@ -65,6 +65,8 @@ import dlrm_data_pytorch as dp
 
 # numpy
 import numpy as np
+import pdb
+import json
 
 # onnx
 # The onnx import causes deprecation warnings every time workers
@@ -486,6 +488,9 @@ if __name__ == "__main__":
     parser.add_argument("--num-indices-per-lookup-fixed", type=bool, default=False)
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--memory-map", action="store_true", default=False)
+    parser.add_argument("--json-dump", action="store_true", default=False)
+    parser.add_argument("--json-path", type=str, default='inference_data/data.json')
+
     # training
     parser.add_argument("--mini-batch-size", type=int, default=1)
     parser.add_argument("--nepochs", type=int, default=1)
@@ -683,7 +688,6 @@ if __name__ == "__main__":
             # early exit if nbatches was set by the user and has been exceeded
             if nbatches > 0 and j >= nbatches:
                 break
-
             print("mini-batch: %d" % j)
             print(X.detach().cpu().numpy())
             # transform offsets to lengths when printing
@@ -807,6 +811,7 @@ if __name__ == "__main__":
     k = 0
 
     # Load model is specified
+#    pdb.set_trace()
     if not (args.load_model == ""):
         print("Loading saved model {}".format(args.load_model))
         if use_gpu:
@@ -846,7 +851,7 @@ if __name__ == "__main__":
             skip_upto_epoch = ld_k  # epochs
             skip_upto_batch = ld_j  # batches
         else:
-            args.print_freq = ld_nbatches
+            #args.print_freq = ld_nbatches
             args.test_freq = 0
 
         print(
@@ -864,6 +869,10 @@ if __name__ == "__main__":
                 ld_gL_test, ld_gA_test * 100
             )
         )
+
+    ########################### MAIN LOOP ###################################
+
+    time_record = []
 
     print("time/loss/accuracy (if enabled):")
     with torch.autograd.profiler.profile(args.enable_profiling, use_gpu) as prof:
@@ -888,6 +897,7 @@ if __name__ == "__main__":
                         iteration_time = 0
                     previous_iteration_time = current_time
                 else:
+                    #pdb.set_trace()
                     t1 = time_wrap(use_gpu)
 
                 # early exit if nbatches was set by the user and has been exceeded
@@ -940,6 +950,9 @@ if __name__ == "__main__":
                 else:
                     t2 = time_wrap(use_gpu)
                     total_time += t2 - t1
+                    # wait for some time after processing each batch
+                    time.sleep(0.1)
+                    #print('time spent:', (t2-t1)*1000, 'ms')
                 total_accu += A
                 total_loss += L * mbs
                 total_iter += 1
@@ -970,6 +983,7 @@ if __name__ == "__main__":
                         )
                         + "loss {:.6f}, accuracy {:3.3f} %".format(gL, gA * 100)
                     )
+                    time_record.append((t2-t1)*1000)
                     # Uncomment the line below to print out the total time with overhead
                     # print("Accumulated time so far: {}" \
                     # .format(time_wrap(use_gpu) - accum_time_begin))
@@ -1156,6 +1170,15 @@ if __name__ == "__main__":
                         break
 
             k += 1  # nepochs
+
+    if args.json_dump:
+        dump_path = args.json_path
+        with open(dump_path, 'w') as f:
+            json.dump(time_record, f)
+    record_avg = np.mean(time_record)
+    record_stdev = np.std(time_record)
+    record_99 = np.percentile(time_record, 99)
+    print("avg = ", record_avg, "stdev = ", record_stdev, "99th pct = ", record_99)
 
     # profiling
     if args.enable_profiling:
