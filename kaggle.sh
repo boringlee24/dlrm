@@ -1,3 +1,10 @@
+#!/bin/bash
+
+if [[ $# == 5 ]]; then
+    extra_option=$5
+else
+    extra_option=""
+fi
 
 dlrm_pt_bin="python dlrm_s_pytorch.py"
 arguments="--arch-sparse-feature-size=16 --arch-mlp-bot=13-512-256-64-16 --arch-mlp-top=512-256-1 \
@@ -12,7 +19,7 @@ echo "run pytorch ..."
 # WARNING: the following parameters will be set based on the data set
 # --arch-embedding-size=... (sparse feature sizes)
 # --arch-mlp-bot=... (the input to the first layer of bottom mlp)
-cmd="$numa_cmd $dlrm_pt_bin $arguments --mini-batch-size=$1 --num-batches=$2 --json-path=$3"
+cmd="$numa_cmd $dlrm_pt_bin $arguments --mini-batch-size=$1 --num-batches=$2 --json-path=$3 $extra_option"
 echo "$cmd"
 $cmd
 

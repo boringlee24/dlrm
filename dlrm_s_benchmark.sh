@@ -12,15 +12,15 @@ else
 fi
 #echo $dlrm_extra_option
 
-cpu=0
-gpu=1
+cpu=1
+gpu=0
 pt=1
 c2=0
 
 ncores=28 #12 #6
 nsockets="0"
 
-ngpus="1" #"1 2 4 8"
+ngpus="8" #"1 2 4 8"
 
 numa_cmd="numactl --physcpubind=0-$((ncores-1)) -m $nsockets" #run on one socket, without HT
 dlrm_pt_bin="python dlrm_s_pytorch.py"
@@ -74,9 +74,9 @@ if [ $cpu = 1 ]; then
     echo "-------------------------------"
     cmd="$numa_cmd $dlrm_pt_bin --mini-batch-size=$mb_size --test-mini-batch-size=$tmb_size --test-num-workers=$tnworkers $_args $dlrm_extra_option > $outf"
     echo $cmd
-    eval $cmd
-    min=$(grep "iteration" $outf | awk 'BEGIN{best=999999} {if (best > $7) best=$7} END{print best}')
-    echo "Min time per iteration = $min"
+    #eval $cmd
+    #min=$(grep "iteration" $outf | awk 'BEGIN{best=999999} {if (best > $7) best=$7} END{print best}')
+    #echo "Min time per iteration = $min"
     ### move profiling file(s)
     ##mv $outp ${outf//".log"/".prof"}
     ##mv ${outp//".prof"/".json"} ${outf//".log"/".json"}
@@ -90,11 +90,11 @@ if [ $cpu = 1 ]; then
     echo "-------------------------------"
     cmd="$numa_cmd $dlrm_c2_bin --mini-batch-size=$mb_size $_args $c2_args $dlrm_extra_option 1> $outf 2> $outp"
     echo $cmd
-    eval $cmd
-    min=$(grep "iteration" $outf | awk 'BEGIN{best=999999} {if (best > $7) best=$7} END{print best}')
-    echo "Min time per iteration = $min"
-    # move profiling file (collected from stderr above)
-    mv $outp ${outf//".log"/".prof"}
+    #eval $cmd
+    #min=$(grep "iteration" $outf | awk 'BEGIN{best=999999} {if (best > $7) best=$7} END{print best}')
+    #echo "Min time per iteration = $min"
+    ## move profiling file (collected from stderr above)
+    #mv $outp ${outf//".log"/".prof"}
   fi
 fi
 

@@ -490,6 +490,7 @@ if __name__ == "__main__":
     parser.add_argument("--memory-map", action="store_true", default=False)
     parser.add_argument("--json-dump", action="store_true", default=False)
     parser.add_argument("--json-path", type=str, default='inference_data/data.json')
+    parser.add_argument("--log-path", type=str, default='run_log/data.log')
 
     # training
     parser.add_argument("--mini-batch-size", type=int, default=1)
@@ -526,8 +527,10 @@ if __name__ == "__main__":
     parser.add_argument("--mlperf-bin-shuffle", action='store_true', default=False)
     args = parser.parse_args()
 
+    run_log = open(args.log_path, 'w')
+
     if args.mlperf_logging:
-        print('command line args: ', json.dumps(vars(args)))
+        print('command line args: ', json.dumps(vars(args)), file=run_log, flush=True)
 
     ### some basic setup ###
     np.random.seed(args.numpy_rand_seed)
@@ -548,10 +551,10 @@ if __name__ == "__main__":
         torch.backends.cudnn.deterministic = True
         device = torch.device("cuda", 0)
         ngpus = torch.cuda.device_count()  # 1
-        print("Using {} GPU(s)...".format(ngpus))
+        print("Using {} GPU(s)...".format(ngpus), file=run_log, flush=True)
     else:
         device = torch.device("cpu")
-        print("Using CPU...")
+        print("Using CPU...", file=run_log, flush=True)
 
     ### prepare training data ###
     ln_bot = np.fromstring(args.arch_mlp_bot, dtype=int, sep="-")
@@ -813,7 +816,7 @@ if __name__ == "__main__":
     # Load model is specified
 #    pdb.set_trace()
     if not (args.load_model == ""):
-        print("Loading saved model {}".format(args.load_model))
+        print("Loading saved model {}".format(args.load_model), file=run_log, flush=True)
         if use_gpu:
             if dlrm.ndevices > 1:
                 # NOTE: when targeting inference on multiple GPUs,
@@ -858,23 +861,23 @@ if __name__ == "__main__":
             "Saved at: epoch = {:d}/{:d}, batch = {:d}/{:d}, ntbatch = {:d}".format(
                 ld_k, ld_nepochs, ld_j, ld_nbatches, ld_nbatches_test
             )
-        )
+        , file=run_log, flush=True)
         print(
             "Training state: loss = {:.6f}, accuracy = {:3.3f} %".format(
                 ld_gL, ld_gA * 100
             )
-        )
+        , file=run_log, flush=True)
         print(
             "Testing state: loss = {:.6f}, accuracy = {:3.3f} %".format(
                 ld_gL_test, ld_gA_test * 100
             )
-        )
-
+        , file=run_log, flush=True)
+ 
     ########################### MAIN LOOP ###################################
 
     time_record = []
 
-    print("time/loss/accuracy (if enabled):")
+    print("time/loss/accuracy (if enabled):", file=run_log, flush=True)
     with torch.autograd.profiler.profile(args.enable_profiling, use_gpu) as prof:
         while k < args.nepochs:
             if k < skip_upto_epoch:
@@ -951,7 +954,7 @@ if __name__ == "__main__":
                     t2 = time_wrap(use_gpu)
                     total_time += t2 - t1
                     # wait for some time after processing each batch
-                    time.sleep(0.1)
+                    #time.sleep(0.1)
                     #print('time spent:', (t2-t1)*1000, 'ms')
                 total_accu += A
                 total_loss += L * mbs
@@ -982,7 +985,7 @@ if __name__ == "__main__":
                             str_run_type, j + 1, nbatches, k, gT
                         )
                         + "loss {:.6f}, accuracy {:3.3f} %".format(gL, gA * 100)
-                    )
+                    , file=run_log, flush=True)
                     time_record.append((t2-t1)*1000)
                     # Uncomment the line below to print out the total time with overhead
                     # print("Accumulated time so far: {}" \
@@ -1097,7 +1100,7 @@ if __name__ == "__main__":
                     if is_best:
                         best_gA_test = gA_test
                         if not (args.save_model == ""):
-                            print("Saving model to {}".format(args.save_model))
+                            print("Saving model to {}".format(args.save_model), file=run_log, flush=True)
                             torch.save(
                                 {
                                     "epoch": k,
@@ -1148,7 +1151,7 @@ if __name__ == "__main__":
                             + " loss {:.6f}, accuracy {:3.3f} %, best {:3.3f} %".format(
                                 gL_test, gA_test * 100, best_gA_test * 100
                             )
-                        )
+                        , file=run_log, flush=True)
                     # Uncomment the line below to print out the total time with overhead
                     # print("Total test time for this group: {}" \
                     # .format(time_wrap(use_gpu) - accum_test_time_begin))
@@ -1178,8 +1181,8 @@ if __name__ == "__main__":
     record_avg = np.mean(time_record)
     record_stdev = np.std(time_record)
     record_99 = np.percentile(time_record, 99)
-    print("avg = ", record_avg, "stdev = ", record_stdev, "99th pct = ", record_99)
-
+    print("avg = ", record_avg, "stdev = ", record_stdev, "99th pct = ", record_99, file=run_log, flush=True)
+ 
     # profiling
     if args.enable_profiling:
         with open("dlrm_s_pytorch.prof", "w") as prof_f:
