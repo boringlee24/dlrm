@@ -52,6 +52,8 @@ col2_norm = col2 / no_col
 col4_norm = col4 / no_col
 col8_norm = col8 / no_col
 
+pdb.set_trace()
+
 ########## plotting #############
 
 x = np.arange(len(rmc_list))  # the label locations
